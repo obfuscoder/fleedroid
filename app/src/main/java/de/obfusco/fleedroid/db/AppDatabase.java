@@ -11,7 +11,7 @@ import de.obfusco.fleedroid.domain.Item;
 import de.obfusco.fleedroid.domain.StockItem;
 import de.obfusco.fleedroid.domain.Transaction;
 
-@Database(entities = { Transaction.class, Item.class, StockItem.class }, version = 1)
+@Database(entities = { Transaction.class, Item.class, StockItem.class }, version = 2)
 @TypeConverters(DateConverter.class)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract TransactionDao transactionDao();
@@ -26,11 +26,13 @@ public abstract class AppDatabase extends RoomDatabase {
             for (String itemCode : transaction.itemCodes) {
                 Item item = itemDao().get(itemCode);
                 if (item != null) {
-                    item.sold = transaction.type == Transaction.Type.PURCHASE ? Calendar.getInstance().getTime() : null;
+                    item.sold = transaction.type == Transaction.Type.PURCHASE ? transaction.date : null;
+                    itemDao().update(item);
                 } else {
                     StockItem stockItem = stockItemDao().get(itemCode);
                     if (stockItem != null) {
                         stockItem.sold = transaction.type == Transaction.Type.PURCHASE ? stockItem.sold + 1 : stockItem.sold - 1;
+                        stockItemDao().update(stockItem);
                     }
                 }
             }

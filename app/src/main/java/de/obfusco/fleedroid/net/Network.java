@@ -78,6 +78,7 @@ public class Network implements Closeable,DiscoveryObserver,PeerObserver, Connec
     }
 
     public void send(String message) {
+        Log.d(TAG, "Sending message: " + message);
         for(Peer peer : peers.values()) {
             peer.send(message);
         }

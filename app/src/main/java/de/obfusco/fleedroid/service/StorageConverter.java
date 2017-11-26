@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import de.obfusco.fleedroid.db.AppDatabase;
+import de.obfusco.fleedroid.domain.Transaction;
 import de.obfusco.fleedroid.net.msg.dto.Category;
 import de.obfusco.fleedroid.net.msg.dto.Data;
 import de.obfusco.fleedroid.net.msg.dto.Item;
@@ -40,4 +41,13 @@ public class StorageConverter {
         database.store(dbData);
     }
 
+    public static String convert(Transaction transaction) {
+        StringBuilder sb = new StringBuilder()
+                .append(transaction.id).append(";")
+                .append(transaction.type.name()).append(";")
+                .append(transaction.date.getTime()).append(";")
+                .append("null").append(";")
+                .append(Transaction.fromList(transaction.itemCodes));
+        return sb.toString();
+    }
 }

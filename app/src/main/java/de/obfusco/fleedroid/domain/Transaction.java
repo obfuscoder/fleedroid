@@ -7,9 +7,12 @@ import android.arch.persistence.room.TypeConverter;
 import android.arch.persistence.room.TypeConverters;
 import android.support.annotation.NonNull;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 @Entity(tableName="transactions")
 public class Transaction {
@@ -29,6 +32,18 @@ public class Transaction {
         this.type = type;
         this.date = date;
         this.itemCodes = itemCodes;
+    }
+
+    public static Transaction create(Type type, List<Item> items) {
+        Transaction transaction = new Transaction();
+        transaction.id = UUID.randomUUID().toString();
+        transaction.type = type;
+        transaction.date = Calendar.getInstance().getTime();
+        transaction.itemCodes = new ArrayList<>();
+        for(Item item : items) {
+            transaction.itemCodes.add(item.code);
+        }
+        return transaction;
     }
 
     public enum Type {
@@ -68,7 +83,7 @@ public class Transaction {
         for (int i=0; i<list.size(); i++) {
             sb.append(list.get(i));
             if (i<list.size()-1) {
-                sb.append(";");
+                sb.append(",");
             }
         }
         return sb.toString();
