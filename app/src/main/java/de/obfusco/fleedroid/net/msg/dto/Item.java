@@ -1,8 +1,8 @@
-package de.obfusco.fleedroid.net.msg;
+package de.obfusco.fleedroid.net.msg.dto;
 
 import java.util.Date;
 
-class Item {
+public class Item {
     public int categoryId;
     public int reservationId;
     public String description;

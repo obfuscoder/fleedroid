@@ -2,6 +2,8 @@ package de.obfusco.fleedroid.net.msg;
 
 import java.io.IOException;
 
+import de.obfusco.fleedroid.net.msg.dto.Data;
+
 public class DataMessage extends Message {
 
     private Data data;

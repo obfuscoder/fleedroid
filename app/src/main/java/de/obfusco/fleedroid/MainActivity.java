@@ -18,6 +18,7 @@ import de.obfusco.fleedroid.net.msg.DataMessage;
 import de.obfusco.fleedroid.net.msg.HelpMessage;
 import de.obfusco.fleedroid.net.msg.Message;
 import de.obfusco.fleedroid.net.msg.TransactionMessage;
+import de.obfusco.fleedroid.service.StorageConverter;
 
 public class MainActivity extends AppCompatActivity implements MessageBroker {
     private static final String TAG = "MainActivity";
@@ -48,18 +49,14 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
 
     @Override
     public void messageReceived(Peer peer, TransactionMessage message) {
-        TransactionDao transactions = database.transactionDao();
-        Transaction transaction = message.getTransaction();
-        if (transactions.get(transaction.id) == null) {
-            transactions.insert(message.getTransaction());
-        }
-        Log.i(TAG, "Transactions: " + transactions.count());
+        database.store(message.getTransaction());
+        Log.i(TAG, "Transactions: " + database.transactionDao().count());
     }
 
     @Override
     public void messageReceived(Peer peer, DataMessage message) {
-        Log.i(TAG, "DATA: " + message.getData());
-        database.transactionDao().deleteAll();
+        Log.i(TAG, "DATA: " + message.getData().name);
+        new StorageConverter(database).store(message.getData());
     }
 
     @Override

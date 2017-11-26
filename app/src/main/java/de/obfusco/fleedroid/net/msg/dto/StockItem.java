@@ -1,6 +1,6 @@
-package de.obfusco.fleedroid.net.msg;
+package de.obfusco.fleedroid.net.msg.dto;
 
-class StockItem {
+public class StockItem {
     public String description;
     public double price;
     public int number;

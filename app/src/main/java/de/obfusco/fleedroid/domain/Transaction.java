@@ -7,6 +7,7 @@ import android.arch.persistence.room.TypeConverter;
 import android.arch.persistence.room.TypeConverters;
 import android.support.annotation.NonNull;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -15,13 +16,10 @@ public class Transaction {
     @PrimaryKey
     @NonNull
     public String id;
-
     @TypeConverters(Type.class)
     public Type type;
     public Date date;
-    public String zipCode;
-
-    @Ignore
+    @TypeConverters(Transaction.class)
     public List<String> itemCodes;
 
     public Transaction() {}
@@ -31,7 +29,6 @@ public class Transaction {
         this.type = type;
         this.date = date;
         this.itemCodes = itemCodes;
-        this.zipCode = zipCode;
     }
 
     public enum Type {
@@ -57,5 +54,23 @@ public class Transaction {
         public static String fromType(Type type) {
             return type.name();
         }
+    }
+
+    @TypeConverter
+    public static List<String> toList(String string) {
+        return Arrays.asList(string.split(";"));
+    }
+
+    @TypeConverter
+    public static String fromList(List<String> list) {
+        // we can't use String.join, so we need to iterate ourselves
+        StringBuilder sb = new StringBuilder();
+        for (int i=0; i<list.size(); i++) {
+            sb.append(list.get(i));
+            if (i<list.size()-1) {
+                sb.append(";");
+            }
+        }
+        return sb.toString();
     }
 }

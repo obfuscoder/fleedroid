@@ -7,11 +7,11 @@ import java.util.Date;
 class DateConverter {
     @TypeConverter
     public static String fromDate(Date date) {
-        return Long.toString(date.getTime());
+        return date == null ? null : Long.toString(date.getTime());
     }
 
     @TypeConverter
     public static Date toDate(String date) {
-        return new Date(Long.parseLong(date));
+        return date == null ? null : new Date(Long.parseLong(date));
     }
 }

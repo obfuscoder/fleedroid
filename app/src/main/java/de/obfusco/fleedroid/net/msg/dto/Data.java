@@ -1,8 +1,8 @@
-package de.obfusco.fleedroid.net.msg;
+package de.obfusco.fleedroid.net.msg.dto;
 
 import java.util.List;
 
-class Data {
+public class Data {
     public int id;
     public String name;
     public List<Category> categories;
