@@ -1,10 +1,12 @@
 package de.obfusco.fleedroid;
 
+import android.app.Activity;
 import android.arch.persistence.room.Room;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -18,10 +20,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 
 import de.obfusco.fleedroid.db.AppDatabase;
-import de.obfusco.fleedroid.db.TransactionDao;
 import de.obfusco.fleedroid.domain.Data;
 import de.obfusco.fleedroid.domain.Item;
 import de.obfusco.fleedroid.domain.Transaction;
@@ -39,6 +39,19 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
     private Network network;
     AppDatabase database;
     List<Item> items = new ArrayList<>();
+
+    private static int SCAN_CODE = 1;
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == SCAN_CODE) {
+            if (resultCode == Activity.RESULT_OK) {
+                TextView codeText = findViewById(R.id.codeText);
+                codeText.setText(data.getDataString());
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +98,16 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
                     }
                 }
                 codeText.setText("");
+            }
+        });
+
+        Button scanButton = findViewById(R.id.scanButton);
+        scanButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, ScanActivity.class);
+                startActivityForResult(intent, SCAN_CODE);
             }
         });
 

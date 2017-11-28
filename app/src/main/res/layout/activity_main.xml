@@ -10,23 +10,37 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <EditText
-            android:id="@+id/codeText"
+        <RelativeLayout
+            android:id="@+id/editLine"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Artikelcode"
-            android:inputType="number"
-            android:singleLine="true"
-            android:textAlignment="center"
-            android:layout_alignParentTop="true"
-            />
+            >
+            <EditText
+                android:id="@+id/codeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:hint="Artikelcode"
+                android:inputType="number"
+                android:singleLine="true"
+                android:textAlignment="center"
+                android:layout_alignParentTop="true"
+                android:layout_toLeftOf="@+id/scanButton"
+                android:layout_alignParentLeft="true"
+                />
+            <Button
+                android:id="@+id/scanButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:text="Scannen" />
+        </RelativeLayout>
 
         <Button
             android:id="@+id/addButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Hinzufügen"
-            android:layout_below="@+id/codeText" />
+            android:layout_below="@+id/editLine" />
 
         <ListView
             android:id="@+id/itemListView"
