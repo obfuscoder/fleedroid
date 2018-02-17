@@ -1,14 +1,26 @@
 package de.obfusco.fleedroid;
 
+import android.Manifest;
 import android.app.Activity;
 import android.arch.persistence.room.Room;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
+import android.util.SparseBooleanArray;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
@@ -22,8 +34,10 @@ import java.util.List;
 import java.util.Locale;
 
 import de.obfusco.fleedroid.db.AppDatabase;
+import de.obfusco.fleedroid.domain.BaseItem;
 import de.obfusco.fleedroid.domain.Data;
 import de.obfusco.fleedroid.domain.Item;
+import de.obfusco.fleedroid.domain.StockItem;
 import de.obfusco.fleedroid.domain.Transaction;
 import de.obfusco.fleedroid.net.MessageBroker;
 import de.obfusco.fleedroid.net.Network;
@@ -38,9 +52,10 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
     private static final String TAG = "MainActivity";
     private Network network;
     AppDatabase database;
-    List<Item> items = new ArrayList<>();
+    List<BaseItem> items = new ArrayList<>();
 
     private static int SCAN_CODE = 1;
+    private Menu menu;
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -48,56 +63,74 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
             if (resultCode == Activity.RESULT_OK) {
                 TextView codeText = findViewById(R.id.codeText);
                 codeText.setText(data.getDataString());
+                addItem();
             }
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main, menu);
+        this.menu = menu;
         initNetwork();
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch(item.getItemId()) {
+            case R.id.delete_item:
+                deleteSelectedItems();
+                break;
+        }
+        return true;
+    }
+
+    private void deleteSelectedItems() {
+        MenuItem deleteItem = menu.findItem(R.id.delete_item);
+        deleteItem.setEnabled(false);
+        deleteItem.setVisible(false);
+
+        ListView itemListView = findViewById(R.id.itemListView);
+        for (int i=items.size()-1; i>=0; i--) {
+            if (itemListView.isItemChecked(i)) items.remove(i);
+        }
+        itemListView.clearChoices();
+
+        ArrayAdapter<BaseItem> adapter = (ArrayAdapter<BaseItem>) itemListView.getAdapter();
+        adapter.notifyDataSetChanged();
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        Toolbar mainToolbar = findViewById(R.id.main_toolbar);
+        setSupportActionBar(mainToolbar);
+
         initDatabase();
 
         addTestData();
 
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        final ListView itemListView = findViewById(R.id.itemListView);
-        final ArrayAdapter<Item> adapter = new ArrayAdapter<Item>(this, android.R.layout.simple_list_item_1, items);
+        ListView itemListView = findViewById(R.id.itemListView);
+        final ArrayAdapter<BaseItem> adapter = new ArrayAdapter<>(this, R.layout.item_list_row, items);
         itemListView.setAdapter(adapter);
+        itemListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                MenuItem deleteItem = menu.findItem(R.id.delete_item);
+                deleteItem.setEnabled(true);
+                deleteItem.setVisible(true);
+            }
+        });
 
         Button addButton = findViewById(R.id.addButton);
         addButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
-                TextView codeText = findViewById(R.id.codeText);
-                Item item = database.itemDao().get(String.valueOf(codeText.getText()));
-                if (item == null) {
-                    showMessageBox("Unbekannter Artikelcode");
-                } else {
-                    if (item.sold != null) {
-                        showMessageBox("Artikel wurde bereits verkauft");
-                    } else {
-                        boolean isAlreadyInList = false;
-                        for(Item enteredItem : items) {
-                            if (enteredItem.code.equals(item.code)) {
-                                isAlreadyInList = true;
-                                break;
-                            }
-                        }
-                        if (isAlreadyInList) {
-                            showMessageBox("Artikel wurde bereits erfasst");
-                        } else {
-                            items.add(item);
-                            adapter.notifyDataSetChanged();
-                            itemListView.smoothScrollToPosition(items.size());
-                            updateCountAndSum();
-                        }
-                    }
-                }
-                codeText.setText("");
+                addItem();
             }
         });
 
@@ -106,6 +139,10 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
 
             @Override
             public void onClick(View v) {
+                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, 1);
+                }
+
                 Intent intent = new Intent(MainActivity.this, ScanActivity.class);
                 startActivityForResult(intent, SCAN_CODE);
             }
@@ -116,14 +153,63 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
 
             @Override
             public void onClick(View v) {
+                if (items.isEmpty()) return;
                 Transaction transaction = Transaction.create(Transaction.Type.PURCHASE, items);
                 database.store(transaction);
-                network.send(StorageConverter.convert(transaction));
+                send(StorageConverter.convert(transaction));
                 items.clear();
                 adapter.notifyDataSetChanged();
                 updateCountAndSum();
             }
         });
+    }
+
+    private void addItem() {
+        TextView codeText = findViewById(R.id.codeText);
+        if (codeText.getText().length() == 0) return;
+        BaseItem item = database.itemDao().get(String.valueOf(codeText.getText()));
+        if (item == null) {
+            item = database.stockItemDao().get(String.valueOf(codeText.getText()));
+        }
+        if (item == null) {
+            showMessageBox("Unbekannter Artikelcode");
+        } else {
+            if (!item.isSellable()) {
+                showMessageBox("Artikel wurde bereits verkauft");
+            } else {
+                if (verifyUniqueness(item)) {
+                    items.add(item);
+                    ListView itemListView = findViewById(R.id.itemListView);
+                    ArrayAdapter<BaseItem> adapter = (ArrayAdapter<BaseItem>) itemListView.getAdapter();
+                    adapter.notifyDataSetChanged();
+                    itemListView.smoothScrollToPosition(items.size());
+                    updateCountAndSum();
+                } else {
+                    showMessageBox("Artikel wurde bereits erfasst");
+                }
+            }
+        }
+        codeText.setText("");
+    }
+
+    private boolean verifyUniqueness(BaseItem item) {
+        if (!item.isUnique()) return true;
+
+        for (BaseItem enteredItem : items) {
+            if (enteredItem.code.equals(item.code)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void send(final String message) {
+        new Thread() {
+            @Override
+            public void run() {
+                network.send(message);
+            }
+        }.start();
     }
 
     private void addTestData() {
@@ -136,6 +222,8 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
         data.addItem("678", 14, 53, "Roller", "Kurt grün", "105", 5.8, null);
         data.addItem("789", 15, 67, "Fahrrad", "Kurt grün", "105", 3.2, null);
         data.addItem("888", 3, 1, "Hose", "beige", null, 2.1, Calendar.getInstance().getTime());
+        data.addStockItem("11", "Tüte", 1, 0);
+        data.addStockItem("22", "Kaffee", 1, 3);
         database.store(data);
     }
 
@@ -144,7 +232,7 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
         countView.setText(String.valueOf(items.size()));
 
         double sum = 0;
-        for (Item item : items) {
+        for (BaseItem item : items) {
             sum += item.price;
         }
 
@@ -167,12 +255,34 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
     }
 
     private void initNetwork() {
+        checkOrRequestNetworkAccess();
         try {
             network = new Network(31454, this, "fleedroid");
             network.start();
         } catch (IOException e) {
             Log.e(TAG, "Could not init network!", e);
         }
+    }
+
+    private void checkOrRequestNetworkAccess() {
+        String[] requiredPermissions = new String[] {
+                Manifest.permission.INTERNET,
+                Manifest.permission.ACCESS_NETWORK_STATE,
+                Manifest.permission.ACCESS_WIFI_STATE,
+                Manifest.permission.CHANGE_WIFI_MULTICAST_STATE
+        };
+        if (!permissionsGranted(requiredPermissions)) {
+            ActivityCompat.requestPermissions(this, requiredPermissions, 1);
+        }
+    }
+
+    private boolean permissionsGranted(String[] permissions) {
+        for (String permission : permissions) {
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void initDatabase() {
@@ -215,5 +325,17 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
 
     private void updateNetworkStatus() {
         Log.i(TAG, "Verbunden mit " + network.getNumberOfPeers() + "System(en)");
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (menu == null) return;
+                MenuItem connectionCountItem = menu.findItem(R.id.connection_count);
+                connectionCountItem.setTitle(String.format("%d Verbindungen", network.getNumberOfPeers()));
+            }
+        });
+    }
+
+    public void startScanActivity(View view) {
+        Log.i(TAG, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
     }
 }

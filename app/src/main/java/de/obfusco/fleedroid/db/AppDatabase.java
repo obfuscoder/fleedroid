@@ -11,7 +11,7 @@ import de.obfusco.fleedroid.domain.Item;
 import de.obfusco.fleedroid.domain.StockItem;
 import de.obfusco.fleedroid.domain.Transaction;
 
-@Database(entities = { Transaction.class, Item.class, StockItem.class }, version = 2)
+@Database(entities = { Transaction.class, Item.class, StockItem.class }, version = 3)
 @TypeConverters(DateConverter.class)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract TransactionDao transactionDao();

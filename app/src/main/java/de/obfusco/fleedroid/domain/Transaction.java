@@ -34,13 +34,13 @@ public class Transaction {
         this.itemCodes = itemCodes;
     }
 
-    public static Transaction create(Type type, List<Item> items) {
+    public static Transaction create(Type type, List<BaseItem> items) {
         Transaction transaction = new Transaction();
         transaction.id = UUID.randomUUID().toString();
         transaction.type = type;
         transaction.date = Calendar.getInstance().getTime();
         transaction.itemCodes = new ArrayList<>();
-        for(Item item : items) {
+        for(BaseItem item : items) {
             transaction.itemCodes.add(item.code);
         }
         return transaction;

@@ -1,0 +1,15 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/connection_count"
+        android:title="0 Verbindungen"
+        android:visible="true"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/delete_item"
+        android:enabled="false"
+        android:icon="@android:drawable/ic_menu_delete"
+        android:title="Delete"
+        android:visible="false"
+        app:showAsAction="always" />
+</menu>

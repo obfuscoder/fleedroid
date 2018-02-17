@@ -9,16 +9,11 @@ import java.util.Date;
 import java.util.Locale;
 
 @Entity(tableName="items")
-public class Item {
-    @PrimaryKey
-    @NonNull
-    public String code;
+public class Item extends BaseItem {
     public int number;
     public int reservationNumber;
     public String category;
-    public String description;
     public String size;
-    public double price;
     public Date sold;
 
     @Override
@@ -27,5 +22,20 @@ public class Item {
         return "" + reservationNumber + "-" + number +
                 " - " + category + ", " + description + " " + size +
                 ": " + currency.format(price);
+    }
+
+    @Override
+    public boolean isSellable() {
+        return sold == null;
+    }
+
+    @Override
+    public void sell(Date date) {
+        sold = date;
+    }
+
+    @Override
+    public boolean isUnique() {
+        return true;
     }
 }
