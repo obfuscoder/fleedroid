@@ -29,4 +29,10 @@ public abstract class StockItemDao {
 
     @Update
     public abstract void update(StockItem stockItem);
+
+    @Query("select sum(sold) from stock_items")
+    public abstract int soldCount();
+
+    @Query("select sum(sold*price) from stock_items")
+    public abstract double soldSum();
 }

@@ -12,6 +12,7 @@ public class Peer extends Thread implements Closeable {
 
     private final PrintWriter sender;
     private final BufferedReader receiver;
+    private final String hostName;
     private Socket socket;
     private PeerObserver peerObserver;
     private Ping ping;
@@ -25,6 +26,7 @@ public class Peer extends Thread implements Closeable {
         this.localName = localName;
         sender = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"), true);
         receiver = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
+        hostName = socket.getInetAddress().getHostName();
     }
 
     @Override
@@ -95,7 +97,7 @@ public class Peer extends Thread implements Closeable {
     }
 
     public String getHostName() {
-        return socket.getInetAddress().getHostName();
+        return hostName;
     }
 
     public String getAddress() {

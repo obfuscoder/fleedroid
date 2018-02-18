@@ -4,6 +4,8 @@ import android.arch.persistence.room.Dao;
 import android.arch.persistence.room.Insert;
 import android.arch.persistence.room.Query;
 
+import java.util.List;
+
 import de.obfusco.fleedroid.domain.Transaction;
 
 @Dao
@@ -19,4 +21,7 @@ public abstract class TransactionDao {
 
     @Query("select * from transactions where id=:id")
     public abstract Transaction get(String id);
+
+    @Query("select * from transactions order by date")
+    public abstract List<Transaction> findAll();
 }

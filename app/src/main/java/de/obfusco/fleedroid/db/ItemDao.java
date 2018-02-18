@@ -28,4 +28,10 @@ public abstract class ItemDao {
 
     @Update
     public abstract void update(Item item);
+
+    @Query("select count(*) from items where sold is not null")
+    public abstract int soldCount();
+
+    @Query("select sum(price) from items where sold is not null")
+    public abstract double soldSum();
 }

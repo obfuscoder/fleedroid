@@ -3,26 +3,20 @@ package de.obfusco.fleedroid;
 import android.Manifest;
 import android.app.Activity;
 import android.arch.persistence.room.Room;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.SpannableString;
-import android.text.style.ForegroundColorSpan;
 import android.util.Log;
-import android.util.SparseBooleanArray;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -36,8 +30,6 @@ import java.util.Locale;
 import de.obfusco.fleedroid.db.AppDatabase;
 import de.obfusco.fleedroid.domain.BaseItem;
 import de.obfusco.fleedroid.domain.Data;
-import de.obfusco.fleedroid.domain.Item;
-import de.obfusco.fleedroid.domain.StockItem;
 import de.obfusco.fleedroid.domain.Transaction;
 import de.obfusco.fleedroid.net.MessageBroker;
 import de.obfusco.fleedroid.net.Network;
@@ -63,7 +55,7 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
             if (resultCode == Activity.RESULT_OK) {
                 TextView codeText = findViewById(R.id.codeText);
                 codeText.setText(data.getDataString());
-                addItem();
+                addItem(null);
             }
         }
         super.onActivityResult(requestCode, resultCode, data);
@@ -83,8 +75,31 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
             case R.id.delete_item:
                 deleteSelectedItems();
                 break;
+            case R.id.connection_count:
+                showStats();
+                break;
         }
         return true;
+    }
+
+    private void showStats() {
+        StringBuilder sb = new StringBuilder();
+        for(Peer peer : network.getPeers()) {
+            sb.append(String.format("%s - %s, dT=%.2f s\n",
+                    peer.getPeerName(), peer.getHostName(), ((double)peer.getTimeDiff())/1000.0));
+        }
+        String connections = "\nConnections:\n" + sb.toString();
+        NumberFormat currency = NumberFormat.getCurrencyInstance(Locale.GERMANY);
+        double sales = database.itemDao().soldSum() + database.stockItemDao().soldSum();
+        String stats = String.format("Artikel: %d\nStammartikel: %d\nTransaktionen: %d\nverkaufte Artikel: %d\nVerkaufte Stammartikel: %d\nUmsatz: %s\n",
+                database.itemDao().count(),
+                database.stockItemDao().count(),
+                database.transactionDao().count(),
+                database.itemDao().soldCount(),
+                database.stockItemDao().soldCount(),
+                currency.format(sales));
+        if(network.getNumberOfPeers() != 0) stats += connections;
+        showMessageBox(stats);
     }
 
     private void deleteSelectedItems() {
@@ -97,9 +112,7 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
             if (itemListView.isItemChecked(i)) items.remove(i);
         }
         itemListView.clearChoices();
-
-        ArrayAdapter<BaseItem> adapter = (ArrayAdapter<BaseItem>) itemListView.getAdapter();
-        adapter.notifyDataSetChanged();
+        itemListChanged();
     }
 
     @Override
@@ -116,55 +129,41 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
         ListView itemListView = findViewById(R.id.itemListView);
         final ArrayAdapter<BaseItem> adapter = new ArrayAdapter<>(this, R.layout.item_list_row, items);
         itemListView.setAdapter(adapter);
-        itemListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                MenuItem deleteItem = menu.findItem(R.id.delete_item);
-                deleteItem.setEnabled(true);
-                deleteItem.setVisible(true);
-            }
+        itemListView.setOnItemClickListener((parent, view, position, id) -> {
+            MenuItem deleteItem = menu.findItem(R.id.delete_item);
+            deleteItem.setEnabled(true);
+            deleteItem.setVisible(true);
         });
 
-        Button addButton = findViewById(R.id.addButton);
-        addButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                addItem();
-            }
-        });
-
-        Button scanButton = findViewById(R.id.scanButton);
-        scanButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, 1);
-                }
-
-                Intent intent = new Intent(MainActivity.this, ScanActivity.class);
-                startActivityForResult(intent, SCAN_CODE);
-            }
-        });
-
-        Button okButton = findViewById(R.id.okButton);
-        okButton.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                if (items.isEmpty()) return;
-                Transaction transaction = Transaction.create(Transaction.Type.PURCHASE, items);
-                database.store(transaction);
-                send(StorageConverter.convert(transaction));
-                items.clear();
-                adapter.notifyDataSetChanged();
-                updateCountAndSum();
-            }
-        });
+        EditText codeEdit = findViewById(R.id.codeText);
+        codeEdit.setOnEditorActionListener((v, actionId, event) -> { addItem(v); return true; });
     }
 
-    private void addItem() {
+    public void checkout(View v) {
+        if (items.isEmpty()) return;
+        Transaction transaction = Transaction.create(Transaction.Type.PURCHASE, items);
+        database.store(transaction);
+        send(StorageConverter.convert(transaction));
+        items.clear();
+        itemListChanged();
+        updateCountAndSum();
+    }
+
+    private void itemListChanged() {
+        ListView itemListView = findViewById(R.id.itemListView);
+        ((ArrayAdapter<BaseItem>) itemListView.getAdapter()).notifyDataSetChanged();
+    }
+
+    public void startScan(View v) {
+        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, 1);
+        }
+
+        Intent intent = new Intent(MainActivity.this, ScanActivity.class);
+        startActivityForResult(intent, SCAN_CODE);
+    }
+
+    public void addItem(View v) {
         TextView codeText = findViewById(R.id.codeText);
         if (codeText.getText().length() == 0) return;
         BaseItem item = database.itemDao().get(String.valueOf(codeText.getText()));
@@ -180,9 +179,8 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
                 if (verifyUniqueness(item)) {
                     items.add(item);
                     ListView itemListView = findViewById(R.id.itemListView);
-                    ArrayAdapter<BaseItem> adapter = (ArrayAdapter<BaseItem>) itemListView.getAdapter();
-                    adapter.notifyDataSetChanged();
                     itemListView.smoothScrollToPosition(items.size());
+                    itemListChanged();
                     updateCountAndSum();
                 } else {
                     showMessageBox("Artikel wurde bereits erfasst");
@@ -204,12 +202,7 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
     }
 
     private void send(final String message) {
-        new Thread() {
-            @Override
-            public void run() {
-                network.send(message);
-            }
-        }.start();
+        new Thread(() -> network.send(message)).start();
     }
 
     private void addTestData() {
@@ -244,12 +237,7 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
     private void showMessageBox(String message) {
         AlertDialog.Builder alertDialog = new AlertDialog.Builder(MainActivity.this);
         alertDialog.setMessage(message);
-        alertDialog.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-            }
-        });
+        alertDialog.setPositiveButton("OK", (dialog, which) -> dialog.dismiss());
         alertDialog.setCancelable(true);
         alertDialog.create().show();
     }
@@ -298,7 +286,17 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
     @Override
     public void messageReceived(Peer peer, DataMessage message) {
         Log.i(TAG, "DATA: " + message.getData().name);
-        new StorageConverter(database).store(message.getData());
+        try {
+            new StorageConverter(database).store(message.getData());
+            runOnUiThread(() ->
+                showMessageBox(String.format("Daten des Termins %s erfolgreich übernommen.", message.getData().name))
+            );
+        } catch (Exception e) {
+            Log.e(TAG, "Could not receive and store data!", e);
+            runOnUiThread(() ->
+                showMessageBox(String.format("Fehler beim Empfang und Speichern der Daten des Termins %s", message.getData().name))
+            );
+        }
     }
 
     @Override
@@ -315,6 +313,12 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
     public void connected(Peer peer) {
         updateNetworkStatus();
         Log.i(TAG,"CONNECTED");
+        new Thread(() -> {
+            for (Transaction transaction : database.transactionDao().findAll()) {
+                Log.i(TAG, "Syncing transaction " + transaction.id + " with peer " + peer.getHostName());
+                peer.send(StorageConverter.convert(transaction));
+            }
+        }).start();
     }
 
     @Override
@@ -325,17 +329,11 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
 
     private void updateNetworkStatus() {
         Log.i(TAG, "Verbunden mit " + network.getNumberOfPeers() + "System(en)");
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (menu == null) return;
-                MenuItem connectionCountItem = menu.findItem(R.id.connection_count);
-                connectionCountItem.setTitle(String.format("%d Verbindungen", network.getNumberOfPeers()));
-            }
+        runOnUiThread(() -> {
+            if (menu == null) return;
+            MenuItem connectionCountItem = menu.findItem(R.id.connection_count);
+            connectionCountItem.setTitle(String.format("%d Verbindung%s",
+                    network.getNumberOfPeers(), network.getNumberOfPeers() == 1 ? "" : "en"));
         });
-    }
-
-    public void startScanActivity(View view) {
-        Log.i(TAG, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
     }
 }
