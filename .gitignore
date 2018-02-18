@@ -6,3 +6,5 @@
 /build
 /captures
 .externalNativeBuild
+/keys.jks
+/app-release.apk
