@@ -9,3 +9,5 @@ git tag $VERSION
 git remote | xargs -L1 git push
 git remote | xargs -L1 git push --tags
 scp app-release.apk flohmarkthelfer:www/shared/public/download/flohmarkthelfer.apk
+scp app-release.apk flohmarkthelfer@netcup:www/shared/public/download/flohmarkthelfer.apk
+
