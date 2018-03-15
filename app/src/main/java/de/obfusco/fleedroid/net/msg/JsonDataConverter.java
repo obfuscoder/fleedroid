@@ -1,6 +1,7 @@
 package de.obfusco.fleedroid.net.msg;
 
 import android.util.Base64;
+import android.util.Log;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;

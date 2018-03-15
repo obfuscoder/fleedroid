@@ -129,6 +129,7 @@ public class Network implements Closeable,DiscoveryObserver,PeerObserver, Connec
 
     @Override
     public void messageReceived(Peer peer, String data) {
+        Log.i(TAG, "Message received: " + data);
         Message.parseAndSignal(data, peer, broker);
     }
 

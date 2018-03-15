@@ -44,7 +44,7 @@ public class Peer extends Thread implements Closeable {
                         peerObserver.disconnected(this);
                         return;
                     }
-                    Log.d(TAG, "Received from peer " + socket.getInetAddress().getHostAddress() + ": " + line);
+                    Log.i(TAG, "Received from peer " + socket.getInetAddress().getHostAddress() + ": " + line);
                     if (line.startsWith("PING")) {
                         if (line.length() > 4) pingReceived(line.substring(5));
                     } else {
