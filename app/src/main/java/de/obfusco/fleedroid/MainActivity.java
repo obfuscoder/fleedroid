@@ -124,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements MessageBroker {
 
         initDatabase();
 
-        addTestData();
+        //addTestData();
 
         ListView itemListView = findViewById(R.id.itemListView);
         final ArrayAdapter<BaseItem> adapter = new ArrayAdapter<>(this, R.layout.item_list_row, items);
