@@ -1,9 +1,9 @@
 VERSION=$1
 # TODO set version and increase versioncode in gradle.properties
 ./gradlew clean assemble
-~/Android/Sdk/build-tools/27.0.1/zipalign -v -p 4 app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/app-release-unsigned-aligned.apk
-~/Android/Sdk/build-tools/27.0.1/apksigner sign --ks keys.jks --out app-release.apk app/build/outputs/apk/release/app-release-unsigned-aligned.apk
-~/Android/Sdk/build-tools/27.0.1/apksigner verify app-release.apk
+zipalign -v -p 4 app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/app-release-unsigned-aligned.apk
+apksigner sign --ks keys.jks --out app-release.apk app/build/outputs/apk/release/app-release-unsigned-aligned.apk
+apksigner verify app-release.apk
 git commit -a -m "Release version $VERSION"
 git tag $VERSION
 git remote | xargs -L1 git push
