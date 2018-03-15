@@ -1,18 +1,13 @@
 package de.obfusco.fleedroid.net.msg;
 
-import android.util.Log;
-
 import java.io.IOException;
 
 import de.obfusco.fleedroid.net.msg.dto.Data;
 
 public class DataMessage extends Message {
-    private static final String TAG = "DataMessage";
-
     private Data data;
 
     private DataMessage(Data data) {
-        Log.i(TAG, "DataMessage-ctor=" + data.name);
         this.data = data;
     }
 
