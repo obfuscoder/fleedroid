@@ -20,14 +20,14 @@ import de.obfusco.fleedroid.net.disco.Discovery;
 import de.obfusco.fleedroid.net.disco.DiscoveryObserver;
 import de.obfusco.fleedroid.net.msg.Message;
 
-public class Network implements Closeable,DiscoveryObserver,PeerObserver, ConnectionObserver {
+public class Network implements Closeable, DiscoveryObserver, PeerObserver, ConnectionObserver {
 
     private static final String TAG = "Network";
 
     private Discovery discovery;
     private PeerListener server;
     private int port;
-    private Map<String,Peer> peers = new HashMap<>();
+    private Map<String, Peer> peers = new HashMap<>();
     private List<String> localHostAddresses;
     private MessageBroker broker;
     private String name;
@@ -41,6 +41,7 @@ public class Network implements Closeable,DiscoveryObserver,PeerObserver, Connec
         discovery = new Discovery(port, this, name, networkInterface);
         server = new PeerListener(port, this);
     }
+
     public void start() {
         discovery.start();
         server.start();
@@ -54,8 +55,8 @@ public class Network implements Closeable,DiscoveryObserver,PeerObserver, Connec
     }
 
     private void closePeers() {
-        for(Iterator<Map.Entry<String,Peer>> it = peers.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<String,Peer> entry = it.next();
+        for (Iterator<Map.Entry<String, Peer>> it = peers.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<String, Peer> entry = it.next();
             entry.getValue().close();
             it.remove();
         }
@@ -79,7 +80,7 @@ public class Network implements Closeable,DiscoveryObserver,PeerObserver, Connec
 
     public void send(String message) {
         Log.d(TAG, "Sending message: " + message);
-        for(Peer peer : peers.values()) {
+        for (Peer peer : peers.values()) {
             peer.send(message);
         }
     }
@@ -92,16 +93,33 @@ public class Network implements Closeable,DiscoveryObserver,PeerObserver, Connec
         List<String> hostAddresses = new ArrayList<>();
         for (Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces(); interfaces.hasMoreElements(); ) {
             NetworkInterface networkInterface = interfaces.nextElement();
+            if (!isUsable(networkInterface)) {
+                continue;
+            }
+            Log.i(TAG, "Network interface " + networkInterface.getName() + " seems usable ... checking addresses");
             for (Enumeration<InetAddress> addresses = networkInterface.getInetAddresses(); addresses.hasMoreElements(); ) {
                 InetAddress address = addresses.nextElement();
+                if (!isUsable(address)) {
+                    continue;
+                }
+                Log.i(TAG, "Network interface has usable net address " + address);
                 hostAddresses.add(address.getHostAddress());
-            }
-            if (!networkInterface.isLoopback() && networkInterface.isUp()) {
-                Log.i(TAG, "Using network interface " + networkInterface.getName());
                 this.networkInterface = networkInterface;
             }
         }
         return hostAddresses;
+    }
+
+    private boolean isUsable(InetAddress address) {
+        return address.isSiteLocalAddress();
+    }
+
+    private boolean isUsable(NetworkInterface networkInterface) throws SocketException {
+        return networkInterface.isUp() &&
+                !networkInterface.isLoopback() &&
+                !networkInterface.isPointToPoint() &&
+                !networkInterface.isVirtual() &&
+                networkInterface.supportsMulticast();
     }
 
     @Override
@@ -135,7 +153,7 @@ public class Network implements Closeable,DiscoveryObserver,PeerObserver, Connec
     @Override
     public void connectionEstablished(Socket socket) {
         String hostAddress = socket.getInetAddress().getHostAddress();
-        Log.i(TAG,"Peering request from " + hostAddress);
+        Log.i(TAG, "Peering request from " + hostAddress);
         if (isPeered(hostAddress)) {
             try {
                 Log.w(TAG, "Already peered with this host");
